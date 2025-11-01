@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌面提示应用</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .tip-window {
+                @apply absolute p-4 md:p-5 rounded-lg shadow-lg shadow-black/20 transition-all duration-300 ease-in-out cursor-pointer select-none;
+            }
+            .tip-text {
+                @apply font-bold text-black text-base md:text-lg whitespace-nowrap;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- 提示弹窗容器 -->
+    <div id="tips-container"></div>
+
+    <script>
+        // 应用状态
+        const appState = {
+            isRunning: false,
+            timer: null,
+            currentTipsCount: 0,
+            maxTips: 50,       // 最大弹窗数
+            showInterval: 0.2,  // 显示间隔(秒)
+            displayTime: 10000  // 显示时间(毫秒)
+        };
+
+        // DOM元素
+        const tipsContainer = document.getElementById('tips-container');
+
+        // 获取随机提示语
+        async function getRandomTip() {
+            try {
+                const response = await fetch('/api/random_tip');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('获取提示失败:', error);
+                // 返回备用数据
+                const backupTips = [
+                    "多喝水，保持身体水分💧",
+                    "起来活动一下，缓解久坐疲劳🏃",
+                    "记得定时休息眼睛👀",
+                    "深呼吸，放松身心🧘",
+                    "保持良好的坐姿，保护颈椎💺",
+                    "喝杯茶，休息一下☕",
+                    "伸展一下四肢，促进血液循环✨",
+                    "记得吃午餐/晚餐哦🍽️",
+                    "休息一下，提高工作效率⚡",
+                    "窗外看看，调节视力🌳",
+                    // 考研相关提示语
+                    "考研加油！坚持就是胜利💪",
+                    "今天的努力，明天的收获🎯",
+                    "复习间隙，记得放松一下😌",
+                    "相信自己，你一定能行的❤️",
+                    "合理规划时间，效率更重要⏰",
+                    "别忘了照顾好自己的身体，才能更好地学习🏥",
+                    "错题本很重要，及时整理📝",
+                    "遇到难题不要慌，慢慢来总能解决🤔",
+                    "适当运动，保持精力充沛🏃",
+                    "考研路上，你并不孤单👥",
+                    "每一步都在靠近梦想🎓",
+                    "保持积极心态，一切都会好的😊",
+                    "记得按时吃饭，补充能量🍎",
+                    "睡前回顾今天的学习内容，巩固记忆🧠",
+                    "累了就休息，休息是为了更好地前进🛌",
+                    // 暖心话语
+                    "今天的你已经很棒了，继续加油💖",
+                    "每一天都值得期待，相信自己🌟",
+                    "小小的进步也是进步，不要着急慢慢来🌈",
+                    "你值得被温柔对待，包括被自己温柔对待💕",
+                    "无论如何，我都相信你能做得很好💯",
+                    "生活可能很难，但你更坚强💪",
+                    "别忘了给自己一个微笑，你笑起来很好看😊",
+                    "每一个认真生活的人都值得尊重✨",
+                    "你已经走了很远的路，不要轻易放弃💫",
+                    "世界因为有你而更加美好🌍",
+                    "对自己好一点，你值得所有的美好🌸",
+                    "累了就抱抱自己，明天会更好的🌟",
+                    "你很重要，不要忘记这一点❤️",
+                    "慢慢来，属于你的时光不会缺席⏳",
+                    "今天也要好好照顾自己哦💝"
+                ];
+                const backupColors = [
+                    '#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7',
+                    '#C7CEEA', '#E0BBE4', '#95DED9', '#FEC8D8', '#FDCBF1',
+                    '#FFAFCC', '#A2D2FF', '#BDE0FE', '#CDB4DB', '#FFC8DD'
+                ];
+                return {
+                    tip: backupTips[Math.floor(Math.random() * backupTips.length)],
+                    color: backupColors[Math.floor(Math.random() * backupColors.length)]
+                };
+            }
+        }
+
+        // 创建提示窗口
+        async function createTipWindow() {
+            if (appState.currentTipsCount >= appState.maxTips) {
+                console.log(`已达到最大弹窗数量 ${appState.maxTips}`);
+                stopTips();
+                return;
+            }
+
+            // 获取随机提示语
+            const tipData = await getRandomTip();
+            const tipText = tipData.tip;
+            const bgColor = tipData.color;
+
+            // 创建弹窗元素
+            const tipWindow = document.createElement('div');
+            tipWindow.className = 'tip-window';
+            tipWindow.style.backgroundColor = bgColor;
+            tipWindow.style.zIndex = 10 + appState.currentTipsCount;
+
+            // 设置提示文本
+            const tipTextEl = document.createElement('div');
+            tipTextEl.className = 'tip-text';
+            tipTextEl.textContent = tipText;
+            tipWindow.appendChild(tipTextEl);
+
+            // 添加到容器
+            tipsContainer.appendChild(tipWindow);
+            appState.currentTipsCount++;
+
+            // 获取屏幕尺寸和弹窗尺寸
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const windowWidth = tipWindow.offsetWidth;
+            const windowHeight = tipWindow.offsetHeight;
+
+            // 设置随机位置
+            const x = Math.floor(Math.random() * (screenWidth - windowWidth));
+            const y = Math.floor(Math.random() * (screenHeight - windowHeight));
+
+            // 应用位置
+            tipWindow.style.left = `${x}px`;
+            tipWindow.style.top = `${y}px`;
+
+            // 添加入场动画
+            tipWindow.style.opacity = '0';
+            tipWindow.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                tipWindow.style.opacity = '1';
+                tipWindow.style.transform = 'scale(1)';
+            }, 10);
+
+            // 添加悬停效果
+            tipWindow.addEventListener('mouseenter', () => {
+                tipWindow.style.transform = 'scale(1.05)';
+                tipWindow.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)';
+            });
+
+            tipWindow.addEventListener('mouseleave', () => {
+                tipWindow.style.transform = 'scale(1)';
+                tipWindow.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.2)';
+            });
+
+            // 点击关闭
+            tipWindow.addEventListener('click', () => {
+                closeTipWindow(tipWindow);
+            });
+
+            // 自动关闭
+            setTimeout(() => {
+                closeTipWindow(tipWindow);
+            }, appState.displayTime);
+        }
+
+        // 关闭提示窗口
+        function closeTipWindow(tipWindow) {
+            tipWindow.style.opacity = '0';
+            tipWindow.style.transform = 'scale(0.9)';
+            
+            setTimeout(() => {
+                if (tipWindow.parentNode === tipsContainer) {
+                    tipsContainer.removeChild(tipWindow);
+                    appState.currentTipsCount = Math.max(0, appState.currentTipsCount - 1);
+                }
+            }, 300);
+        }
+
+        // 开始显示提示
+        function startTips() {
+            if (appState.isRunning) return;
+            
+            appState.isRunning = true;
+            
+            // 立即显示一个提示
+            createTipWindow();
+            
+            // 设置定时器
+            appState.timer = setInterval(() => {
+                if (appState.currentTipsCount < appState.maxTips && appState.isRunning) {
+                    createTipWindow();
+                }
+                // 移除了当达到最大弹窗数时停止的逻辑，让应用持续运行
+            }, appState.showInterval * 1000);
+        }
+
+        // 停止显示提示
+        function stopTips() {
+            if (!appState.isRunning) return;
+            
+            appState.isRunning = false;
+            if (appState.timer) {
+                clearInterval(appState.timer);
+                appState.timer = null;
+            }
+        }
+
+        // 清除所有提示
+        function clearAllTips() {
+            const tipWindows = document.querySelectorAll('.tip-window');
+            tipWindows.forEach(window => {
+                closeTipWindow(window);
+            });
+            
+            appState.currentTipsCount = 0;
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // Escape 清除所有
+            if (e.key === 'Escape') {
+                clearAllTips();
+            }
+        });
+
+        // 窗口大小改变时，调整弹窗位置
+        window.addEventListener('resize', () => {
+            const tipWindows = document.querySelectorAll('.tip-window');
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            
+            tipWindows.forEach(window => {
+                const windowWidth = window.offsetWidth;
+                const windowHeight = window.offsetHeight;
+                
+                let x = parseInt(window.style.left);
+                let y = parseInt(window.style.top);
+                
+                // 确保弹窗不超出屏幕
+                x = Math.min(x, screenWidth - windowWidth);
+                y = Math.min(y, screenHeight - windowHeight);
+                x = Math.max(x, 0);
+                y = Math.max(y, 0);
+                
+                window.style.left = `${x}px`;
+                window.style.top = `${y}px`;
+            });
+        });
+
+        // 页面加载完成后自动开始
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                startTips();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
