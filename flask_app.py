@@ -1,7 +1,8 @@
 from flask import Flask, render_template, jsonify
 import random
 
-app = Flask(__name__)
+# 将模板目录设置为当前目录，避免需要创建templates文件夹
+app = Flask(__name__, template_folder='.')
 
 # 提示语列表
 TIPS_LIST = [
